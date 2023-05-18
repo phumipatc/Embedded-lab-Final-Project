@@ -55,9 +55,9 @@ UART_HandleTypeDef huart2;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_USART1_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -65,72 +65,73 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 int workingInProgress = 0,dataPrepared = 0,currentPositionOfBuffer = 0;
-uint8_t buffer[20];
+uint8_t buffer[20],receivedData[10];
 ADC_ChannelConfTypeDef sConfig = {0};
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	 if(GPIO_Pin != GPIO_PIN_13)
 		 return ;
 	 if(workingInProgress)
 		 return ;
-	 dataPrepared = 0;
-	 workingInProgress = 1;
-	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
-	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
-
-	 // get Value from TDS Sensor
-	 int TDSav = 0;
-	 sConfig.Channel = ADC_CHANNEL_0;
-	 for(int i=1;i<=100;i++){
-		 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-		 HAL_ADC_Start(&hadc1);
-		 int adcValue;
-		 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-			adcValue = HAL_ADC_GetValue(&hadc1);
-			TDSav+=adcValue;
-		 }
-	 }
-	 TDSav/=100;
-
-	 // get Value from thermo Sensor
-	 int thermoAv = 0;
-	 sConfig.Channel = ADC_CHANNEL_1;
-	 for(int i=1;i<=100;i++){
-		 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-		 HAL_ADC_Start(&hadc1);
-		 int adcValue;
-		 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-			adcValue = HAL_ADC_GetValue(&hadc1);
-			thermoAv+=adcValue;
-		 }
-	 }
-	 thermoAv/=100;
-
-	 // get Value from O2 Sensor
-	 int O2av = 0;
-	 sConfig.Channel = ADC_CHANNEL_2;
-	 for(int i=1;i<=100;i++){
-		 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-		 HAL_ADC_Start(&hadc1);
-		 int adcValue;
-		 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-			adcValue = HAL_ADC_GetValue(&hadc1);
-			O2av+=adcValue;
-		 }
-	 }
-	 O2av/=100;
-
-	 // Convert Int to String
-	 sprintf(buffer, "%04d", TDSav);
-	 sprintf(buffer+4, "%04d", thermoAv);
-	 sprintf(buffer+8, "%04d", O2av);
-	 buffer[0] = 'A';
-	 buffer[4] = 'B';
-	 buffer[8] = 'C';
-	 buffer[12] = '\0';
-
-	 currentPositionOfBuffer = 0;
-	 dataPrepared = 1;
+//	 workingInProgress = 1;
+//	 dataPrepared = 0;
+//
+//	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+//	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
+//	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
+//
+//	 // get Value from TDS Sensor
+//	 int TDSav = 0;
+//	 sConfig.Channel = ADC_CHANNEL_0;
+//	 for(int i=1;i<=100;i++){
+//		 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+//		 HAL_ADC_Start(&hadc1);
+//		 int adcValue;
+//		 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
+//			adcValue = HAL_ADC_GetValue(&hadc1);
+//			TDSav+=adcValue;
+//		 }
+//	 }
+//	 TDSav/=100;
+//
+//	 // get Value from thermo Sensor
+//	 int thermoAv = 0;
+//	 sConfig.Channel = ADC_CHANNEL_1;
+//	 for(int i=1;i<=100;i++){
+//		 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+//		 HAL_ADC_Start(&hadc1);
+//		 int adcValue;
+//		 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
+//			adcValue = HAL_ADC_GetValue(&hadc1);
+//			thermoAv+=adcValue;
+//		 }
+//	 }
+//	 thermoAv/=100;
+//
+//	 // get Value from O2 Sensor
+//	 int O2av = 0;
+//	 sConfig.Channel = ADC_CHANNEL_2;
+//	 for(int i=1;i<=100;i++){
+//		 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+//		 HAL_ADC_Start(&hadc1);
+//		 int adcValue;
+//		 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
+//			adcValue = HAL_ADC_GetValue(&hadc1);
+//			O2av+=adcValue;
+//		 }
+//	 }
+//	 O2av/=100;
+//
+//	 // Convert Int to String
+//	 sprintf(buffer, "%04d", TDSav);
+//	 sprintf(buffer+4, "%04d", thermoAv);
+//	 sprintf(buffer+8, "%04d", O2av);
+//	 buffer[0] = 'A';
+//	 buffer[4] = 'B';
+//	 buffer[8] = 'C';
+//	 buffer[12] = '\0';
+//
+//	 currentPositionOfBuffer = 0;
+//	 dataPrepared = 1;
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
@@ -146,9 +147,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			workingInProgress = 0;
 			return ;
 		}
-//		HAL_UART_Transmit(&huart1, &buffer[currentPositionOfBuffer++], 1, 100);
-		HAL_UART_Transmit(&huart2, &buffer[currentPositionOfBuffer++], 1, 100);
+		HAL_UART_Transmit(&huart1, &buffer[currentPositionOfBuffer], 1, 100);
+		HAL_UART_Transmit(&huart2, &buffer[currentPositionOfBuffer], 1, 100);
+		currentPositionOfBuffer++;
 	}
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	workingInProgress = 0;
+	HAL_UART_Receive_IT(&huart1, receivedData, 1);
 }
 /* USER CODE END 0 */
 
@@ -181,11 +188,12 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_USART1_UART_Init();
   MX_ADC1_Init();
   MX_TIM2_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
+  HAL_UART_Receive_IT(&huart1, receivedData, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -201,6 +209,72 @@ int main(void)
 	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, !workingInProgress);
 	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, workingInProgress);
 	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, workingInProgress);
+
+	 if(pressedButton && !pressing && !workingInProgress){
+		 pressing = 1;
+		 workingInProgress = 1;
+		 dataPrepared = 0;
+
+		 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+		 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
+		 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
+
+		 // get Value from TDS Sensor
+		 int TDSav = 0;
+		 sConfig.Channel = ADC_CHANNEL_0;
+		 for(int i=1;i<=100;i++){
+			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+			 HAL_ADC_Start(&hadc1);
+			 int adcValue;
+			 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
+				adcValue = HAL_ADC_GetValue(&hadc1);
+				TDSav+=adcValue;
+			 }
+		 }
+		 TDSav/=100;
+
+		 // get Value from thermo Sensor
+		 int thermoAv = 0;
+		 sConfig.Channel = ADC_CHANNEL_1;
+		 for(int i=1;i<=100;i++){
+			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+			 HAL_ADC_Start(&hadc1);
+			 int adcValue;
+			 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
+				adcValue = HAL_ADC_GetValue(&hadc1);
+				thermoAv+=adcValue;
+			 }
+		 }
+		 thermoAv/=100;
+
+		 // get Value from O2 Sensor
+		 int O2av = 0;
+		 sConfig.Channel = ADC_CHANNEL_2;
+		 for(int i=1;i<=100;i++){
+			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+			 HAL_ADC_Start(&hadc1);
+			 int adcValue;
+			 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
+				adcValue = HAL_ADC_GetValue(&hadc1);
+				O2av+=adcValue;
+			 }
+		 }
+		 O2av/=100;
+
+		 // Convert Int to String
+		 sprintf(buffer, "%04d", TDSav);
+		 sprintf(buffer+4, "%04d", thermoAv);
+		 sprintf(buffer+8, "%04d", O2av);
+		 buffer[0] = 'A';
+		 buffer[4] = 'B';
+		 buffer[8] = 'C';
+		 buffer[12] = '\0';
+
+		 currentPositionOfBuffer = 0;
+		 dataPrepared = 1;
+	 }else if(!pressedButton && pressing){
+		 pressing = 0;
+	 }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
