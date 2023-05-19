@@ -4417,7 +4417,7 @@ int main(void)
  800221e:	2000      	movs	r0, #0
  8002220:	f7ff fd3a 	bl	8001c98 <ssd1306_set_cursor>
 		 char scrBuffer[15];
-		 sprintf(scrBuffer, "TDS: %d ppm",tdsValue);
+		 sprintf(scrBuffer, "TDS: %dppm",tdsValue);
  8002224:	1d3b      	adds	r3, r7, #4
  8002226:	69fa      	ldr	r2, [r7, #28]
  8002228:	4938      	ldr	r1, [pc, #224]	; (800230c <main+0x4cc>)

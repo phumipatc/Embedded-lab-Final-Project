@@ -426,7 +426,7 @@ int main(void)
 		 ssd1306_black_screen();
 		 ssd1306_set_cursor(0, 0);
 		 char scrBuffer[15];
-		 sprintf(scrBuffer, "TDS: %d",tdsValue);
+		 sprintf(scrBuffer, "TDS: %dppm",tdsValue);
 		 ssd1306_write_string(font11x18, scrBuffer);
 		 ssd1306_enter();
 		 sprintf(scrBuffer, "Temp: %d C",thermoAv/10);
