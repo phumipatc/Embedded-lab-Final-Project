@@ -5,8 +5,8 @@
 EspSoftwareSerial::UART testSerial;
 
 // WiFi credentials
-const char* ssid = "Pun mai ngub";
-const char* password = "punpunpun3";
+const char* ssid = "no internet";
+const char* password = "nointernet";
 
 // Set your Firebase project's unique identifier
 const char* firebaseHost = "embbeded-final-project-water-default-rtdb.asia-southeast1.firebasedatabase.app";

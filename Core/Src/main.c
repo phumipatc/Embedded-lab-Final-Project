@@ -21,7 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "ds18b20.h"
+#include "onewire.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +43,7 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart1;
@@ -58,12 +60,15 @@ static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#define VREF = 5.0;
+#define SCOUNT = 100;
 int workingInProgress = 0,dataPrepared = 0,currentPositionOfBuffer = 0;
 uint8_t buffer[20],receivedData[10];
 ADC_ChannelConfTypeDef sConfig = {0};
@@ -157,6 +162,108 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	workingInProgress = 0;
 	HAL_UART_Receive_IT(&huart1, receivedData, 1);
 }
+
+//void changeModeToWrite(){
+//	GPIO_InitTypeDef GPIO_InitStruct = {0};
+//	GPIO_InitStruct.Pin = GPIO_PIN_11;
+//	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+//	GPIO_InitStruct.Pull = GPIO_NOPULL;
+//	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+//	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+//}
+//
+//void changeModeToRead(){
+//	GPIO_InitTypeDef GPIO_InitStruct = {0};
+//	GPIO_InitStruct.Pin = GPIO_PIN_11;
+//	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+//	GPIO_InitStruct.Pull = GPIO_NOPULL;
+//	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+//}
+//
+//int sensorInit(){
+//	changeModeToWrite();
+//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
+//	HAL_Delay(5);
+//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
+//	HAL_Delay(750);
+//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
+//	changeModeToRead();
+//	int t = 0;
+//	while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_11)){
+//		t++;
+//		if(t > 60)
+//			return 0;
+//		HAL_Delay(1);
+//	}
+//	t = 480 - t;
+//	changeModeToWrite();
+//	HAL_Delay(t);
+//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
+//	return 1;
+//}
+//
+//void sensorWrite(uint8_t data){
+//	changeModeToWrite();
+//	for(int i=0;i<8;i++){
+//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
+//		HAL_Delay(10);
+//		if(data & 1)
+//			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
+//		else
+//			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
+//		data >>= 1;
+//		HAL_Delay(50);
+//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
+//	}
+//}
+//
+//uint8_t sensorRead(){
+//	changeModeToWrite();
+//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
+//	HAL_Delay(2);
+//	uint8_t data = 0;
+//	for(int i=0;i<8;i++){
+//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
+//		HAL_Delay(1);
+//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
+//		changeModeToRead();
+//		HAL_Delay(5);
+//		data >>=1;
+//		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_11))
+//			data |= 0x80;
+//		HAL_Delay(55);
+//		changeModeToWrite();
+//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
+//	}
+//	return data;
+//}
+//
+float tempRead(){
+//	if(!sensorInit())
+//		return 0;
+//	sensorWrite(0xCC);
+//	sensorWrite(0x44);
+//	if(!sensorInit())
+//		return 0;
+//	sensorWrite(0xCC);
+//	sensorWrite(0xBE);
+//	uint8_t temp = sensorRead();
+//	temp |= sensorRead() << 8;
+//	return temp;
+
+	DS18B20_ReadAll();
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
+	DS18B20_StartAll();
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
+	uint8_t ROM_tmp[8];
+	uint8_t i;
+	float temperature;
+	for(i=0;i<DS18B20_Quantity();i++){
+		if(DS18B20_GetTemperature(i, &temperature)){
+			return temperature;
+		}
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -191,9 +298,12 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM2_Init();
   MX_USART1_UART_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_UART_Receive_IT(&huart1, receivedData, 1);
+  DS18B20_Init(DS18B20_Resolution_12bits);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -219,6 +329,26 @@ int main(void)
 		 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
 		 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
 
+		 // get Value from thermo Sensor
+//		 int thermoAv = 0;
+//		 sConfig.Channel = ADC_CHANNEL_1;
+//		 for(int i=1;i<=100;i++){
+//			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+//			 HAL_ADC_Start(&hadc1);
+//			 int adcValue;
+//			 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
+//				adcValue = HAL_ADC_GetValue(&hadc1);
+//				thermoAv+=adcValue;
+//			 }
+//		 }
+//		 thermoAv/=100;
+		 int thermoAv = 0;
+		 float thermoSum = 0;
+		 for(int i=1;i<=100;i++){
+			 thermoSum+=tempRead();
+		 }
+		 thermoAv = thermoSum/100;
+
 		 // get Value from TDS Sensor
 		 int TDSav = 0;
 		 sConfig.Channel = ADC_CHANNEL_0;
@@ -232,37 +362,28 @@ int main(void)
 			 }
 		 }
 		 TDSav/=100;
+		 float compensationCoefficient=1.0+0.02*(thermoAv - 25.0);
+		 float compensationVolatge=TDSav/compensationCoefficient;
+		 int tdsValue=10*(133.42*compensationVolatge*compensationVolatge*compensationVolatge - 255.86*compensationVolatge*compensationVolatge + 857.39*compensationVolatge)*0.5;
 
-		 // get Value from thermo Sensor
-		 int thermoAv = 0;
-		 sConfig.Channel = ADC_CHANNEL_1;
-		 for(int i=1;i<=100;i++){
-			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-			 HAL_ADC_Start(&hadc1);
-			 int adcValue;
-			 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-				adcValue = HAL_ADC_GetValue(&hadc1);
-				thermoAv+=adcValue;
-			 }
-		 }
-		 thermoAv/=100;
 
 		 // get Value from O2 Sensor
-		 int O2av = 0;
-		 sConfig.Channel = ADC_CHANNEL_2;
-		 for(int i=1;i<=100;i++){
-			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-			 HAL_ADC_Start(&hadc1);
-			 int adcValue;
-			 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-				adcValue = HAL_ADC_GetValue(&hadc1);
-				O2av+=adcValue;
-			 }
-		 }
-		 O2av/=100;
+//		 int O2av = 0;
+//		 sConfig.Channel = ADC_CHANNEL_2;
+//		 for(int i=1;i<=100;i++){
+//			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+//			 HAL_ADC_Start(&hadc1);
+//			 int adcValue;
+//			 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
+//				adcValue = HAL_ADC_GetValue(&hadc1);
+//				O2av+=adcValue;
+//			 }
+//		 }
+//		 O2av/=100;
+		 int O2av = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10);
 
 		 // Convert Int to String
-		 sprintf(buffer, "%04d", TDSav);
+		 sprintf(buffer, "%04d", tdsValue);
 		 sprintf(buffer+4, "%04d", thermoAv);
 		 sprintf(buffer+8, "%04d", O2av);
 		 buffer[0] = 'A';
@@ -393,6 +514,52 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 63;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
 
 }
 
@@ -528,7 +695,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, LD2_Pin|GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -543,8 +710,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PC7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  /*Configure GPIO pin : PC10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
