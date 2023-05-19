@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "ds18b20.h"
 #include "onewire.h"
+#include "ssd1306.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,6 +44,8 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+I2C_HandleTypeDef hi2c1;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 
@@ -61,14 +64,15 @@ static void MX_ADC1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define VREF = 5.0;
-#define SCOUNT = 100;
+#define VREF 5.0;
+#define SCOUNT 100;
 int workingInProgress = 0,dataPrepared = 0,currentPositionOfBuffer = 0;
 uint8_t buffer[20],receivedData[10];
 ADC_ChannelConfTypeDef sConfig = {0};
@@ -299,15 +303,32 @@ int main(void)
   MX_TIM2_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_UART_Receive_IT(&huart1, receivedData, 1);
+
   DS18B20_Init(DS18B20_Resolution_12bits);
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  ssd1306_init();
+
+//  ssd1306_write_string(font6x8, "ABC");
+//  ssd1306_write_string(font7x10, "ABC");
+//  ssd1306_write_string(font16x26, "ABC");
+
+  ssd1306_write_string(font11x18, "");
+  ssd1306_enter();
+  ssd1306_write_string(font11x18, "Hello World");
+  ssd1306_enter();
+
+
+  ssd1306_update_screen();
+
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
@@ -324,10 +345,16 @@ int main(void)
 		 pressing = 1;
 		 workingInProgress = 1;
 		 dataPrepared = 0;
-
 		 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
 		 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
 		 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
+
+		 ssd1306_black_screen();
+		 ssd1306_set_cursor(0, 0);
+		 ssd1306_write_string(font11x18, "");
+		 ssd1306_enter();
+		 ssd1306_write_string(font11x18, "Working...");
+		 ssd1306_update_screen();
 
 		 // get Value from thermo Sensor
 //		 int thermoAv = 0;
@@ -347,11 +374,12 @@ int main(void)
 		 for(int i=1;i<=100;i++){
 			 thermoSum+=tempRead();
 		 }
-		 thermoAv = thermoSum/100;
+		 thermoAv = thermoSum/10;
 
 		 // get Value from TDS Sensor
 		 int TDSav = 0;
 		 sConfig.Channel = ADC_CHANNEL_0;
+
 		 for(int i=1;i<=100;i++){
 			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 			 HAL_ADC_Start(&hadc1);
@@ -361,10 +389,11 @@ int main(void)
 				TDSav+=adcValue;
 			 }
 		 }
-		 TDSav/=100;
-		 float compensationCoefficient=1.0+0.02*(thermoAv - 25.0);
-		 float compensationVolatge=TDSav/compensationCoefficient;
-		 int tdsValue=10*(133.42*compensationVolatge*compensationVolatge*compensationVolatge - 255.86*compensationVolatge*compensationVolatge + 857.39*compensationVolatge)*0.5;
+		 TDSav = TDSav/100;
+		 float averageVoltage = (TDSav * 5.0) / 1024;
+		 float compensationCoefficient=1.0+0.02*(thermoAv-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
+		 float compensationVolatge=averageVoltage/compensationCoefficient;  //temperature compensation
+		 int tdsValue = (133.42*compensationVolatge*compensationVolatge*compensationVolatge - 255.86*compensationVolatge*compensationVolatge + 857.39*compensationVolatge)*0.5; //convert voltage value to tds value
 
 
 		 // get Value from O2 Sensor
@@ -393,6 +422,23 @@ int main(void)
 
 		 currentPositionOfBuffer = 0;
 		 dataPrepared = 1;
+
+		 ssd1306_black_screen();
+		 ssd1306_set_cursor(0, 0);
+		 char scrBuffer[15];
+		 sprintf(scrBuffer, "TDS: %d",tdsValue);
+		 ssd1306_write_string(font11x18, scrBuffer);
+		 ssd1306_enter();
+		 sprintf(scrBuffer, "Temp: %d C",thermoAv/10);
+		 ssd1306_write_string(font11x18, scrBuffer);
+		 ssd1306_enter();
+		 if(O2av)
+			 sprintf(scrBuffer, "Water: YES");
+		 else
+			 sprintf(scrBuffer, "Water: NO");
+		 ssd1306_write_string(font11x18, scrBuffer);
+		 ssd1306_enter();
+		 ssd1306_update_screen();
 	 }else if(!pressedButton && pressing){
 		 pressing = 0;
 	 }
@@ -514,6 +560,40 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 2;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
 
 }
 

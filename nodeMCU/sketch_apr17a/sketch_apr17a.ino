@@ -51,16 +51,20 @@ void loop() {
       TDS_Value*=10;
       TDS_Value+=buffer[i]-'0';
     }
-    int Thermo_Value = 0;
+
+    float Thermo_Value = 0;
     for(int i=5;i<=7;i++){
       Thermo_Value*=10;
       Thermo_Value+=buffer[i]-'0';
     }
+    Thermo_Value/=10;
+
     int DissolvedO2_Value = 0;
     for(int i=9;i<=11;i++){
       DissolvedO2_Value*=10;
       DissolvedO2_Value+=buffer[i]-'0';
     }
+
     // Send the data to Firestore
     if (Firebase.setInt(firebaseData, "/TDS_Value", TDS_Value)) {
       Serial.println("TDS_Value sent to Firestore successfully");
@@ -68,7 +72,7 @@ void loop() {
       Serial.println("Failed to send data to Firestore");
       Serial.println(firebaseData.errorReason());
     }
-    if (Firebase.setInt(firebaseData, "/Thermo_Value", Thermo_Value)) {
+    if (Firebase.setFloat(firebaseData, "/Thermo_Value", Thermo_Value)) {
       Serial.println("Thermo_Value sent to Firestore successfully");
     } else {
       Serial.println("Failed to send data to Firestore");
