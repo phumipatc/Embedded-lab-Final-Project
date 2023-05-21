@@ -5,8 +5,8 @@
 EspSoftwareSerial::UART testSerial;
 
 // WiFi credentials
-const char* ssid = "no internet";
-const char* password = "nointernet";
+const char* ssid = "rayongcom_2.4";
+const char* password = "rycsupply";
 
 // Set your Firebase project's unique identifier
 const char* firebaseHost = "embbeded-final-project-water-default-rtdb.asia-southeast1.firebasedatabase.app";
@@ -92,6 +92,10 @@ void loop() {
 
   if(testSerial.available() > 0){
     buffer[cnt++] = testSerial.read();
+    if(buffer[cnt-1] == 'A'){
+      buffer[0] = 'A';
+      cnt = 1;
+    }
     // Serial.print("Received: ");
     // Serial.println(buffer[cnt-1]);
   }

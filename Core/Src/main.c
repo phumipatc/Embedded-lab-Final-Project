@@ -48,6 +48,7 @@ I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -65,90 +66,23 @@ static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define VREF 5.0;
-#define SCOUNT 100;
 int workingInProgress = 0,dataPrepared = 0,currentPositionOfBuffer = 0;
+int pressedButton = 0;
 uint8_t buffer[20],receivedData[10];
 ADC_ChannelConfTypeDef sConfig = {0};
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	 if(GPIO_Pin != GPIO_PIN_13)
-		 return ;
-	 if(workingInProgress)
-		 return ;
-//	 workingInProgress = 1;
-//	 dataPrepared = 0;
-//
-//	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-//	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
-//	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
-//
-//	 // get Value from TDS Sensor
-//	 int TDSav = 0;
-//	 sConfig.Channel = ADC_CHANNEL_0;
-//	 for(int i=1;i<=100;i++){
-//		 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-//		 HAL_ADC_Start(&hadc1);
-//		 int adcValue;
-//		 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-//			adcValue = HAL_ADC_GetValue(&hadc1);
-//			TDSav+=adcValue;
-//		 }
-//	 }
-//	 TDSav/=100;
-//
-//	 // get Value from thermo Sensor
-//	 int thermoAv = 0;
-//	 sConfig.Channel = ADC_CHANNEL_1;
-//	 for(int i=1;i<=100;i++){
-//		 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-//		 HAL_ADC_Start(&hadc1);
-//		 int adcValue;
-//		 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-//			adcValue = HAL_ADC_GetValue(&hadc1);
-//			thermoAv+=adcValue;
-//		 }
-//	 }
-//	 thermoAv/=100;
-//
-//	 // get Value from O2 Sensor
-//	 int O2av = 0;
-//	 sConfig.Channel = ADC_CHANNEL_2;
-//	 for(int i=1;i<=100;i++){
-//		 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-//		 HAL_ADC_Start(&hadc1);
-//		 int adcValue;
-//		 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-//			adcValue = HAL_ADC_GetValue(&hadc1);
-//			O2av+=adcValue;
-//		 }
-//	 }
-//	 O2av/=100;
-//
-//	 // Convert Int to String
-//	 sprintf(buffer, "%04d", TDSav);
-//	 sprintf(buffer+4, "%04d", thermoAv);
-//	 sprintf(buffer+8, "%04d", O2av);
-//	 buffer[0] = 'A';
-//	 buffer[4] = 'B';
-//	 buffer[8] = 'C';
-//	 buffer[12] = '\0';
-//
-//	 currentPositionOfBuffer = 0;
-//	 dataPrepared = 1;
-}
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
-	if(!dataPrepared)
-		return ;
-
-	// TIM1 is used for display through UART
-	if(htim->Instance == TIM2){
+//	HAL_UART_Transmit(&huart2, "Interrupted\n\r", 13, 100);
+	if(htim->Instance == TIM3){
+		if(!dataPrepared)
+			return ;
 		// Display the counter values via UART
 		if(currentPositionOfBuffer == 12){
 			HAL_UART_Transmit(&huart2, "\n\r", 2, 100);
@@ -156,9 +90,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			workingInProgress = 0;
 			return ;
 		}
-		HAL_UART_Transmit(&huart1, &buffer[currentPositionOfBuffer], 1, 100);
-		HAL_UART_Transmit(&huart2, &buffer[currentPositionOfBuffer], 1, 100);
+		HAL_UART_Transmit(&huart1, &buffer[currentPositionOfBuffer], 1, 10);
+		HAL_UART_Transmit(&huart2, &buffer[currentPositionOfBuffer], 1, 10);
 		currentPositionOfBuffer++;
+	}else if(htim->Instance == TIM2){
+		pressedButton = 1;
+		HAL_UART_Transmit(&huart2, "Sending...\n\r", 12, 100);
 	}
 }
 
@@ -167,94 +104,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	HAL_UART_Receive_IT(&huart1, receivedData, 1);
 }
 
-//void changeModeToWrite(){
-//	GPIO_InitTypeDef GPIO_InitStruct = {0};
-//	GPIO_InitStruct.Pin = GPIO_PIN_11;
-//	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-//	GPIO_InitStruct.Pull = GPIO_NOPULL;
-//	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-//	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-//}
-//
-//void changeModeToRead(){
-//	GPIO_InitTypeDef GPIO_InitStruct = {0};
-//	GPIO_InitStruct.Pin = GPIO_PIN_11;
-//	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-//	GPIO_InitStruct.Pull = GPIO_NOPULL;
-//	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-//}
-//
-//int sensorInit(){
-//	changeModeToWrite();
-//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
-//	HAL_Delay(5);
-//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
-//	HAL_Delay(750);
-//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
-//	changeModeToRead();
-//	int t = 0;
-//	while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_11)){
-//		t++;
-//		if(t > 60)
-//			return 0;
-//		HAL_Delay(1);
-//	}
-//	t = 480 - t;
-//	changeModeToWrite();
-//	HAL_Delay(t);
-//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
-//	return 1;
-//}
-//
-//void sensorWrite(uint8_t data){
-//	changeModeToWrite();
-//	for(int i=0;i<8;i++){
-//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
-//		HAL_Delay(10);
-//		if(data & 1)
-//			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
-//		else
-//			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
-//		data >>= 1;
-//		HAL_Delay(50);
-//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
-//	}
-//}
-//
-//uint8_t sensorRead(){
-//	changeModeToWrite();
-//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
-//	HAL_Delay(2);
-//	uint8_t data = 0;
-//	for(int i=0;i<8;i++){
-//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 0);
-//		HAL_Delay(1);
-//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
-//		changeModeToRead();
-//		HAL_Delay(5);
-//		data >>=1;
-//		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_11))
-//			data |= 0x80;
-//		HAL_Delay(55);
-//		changeModeToWrite();
-//		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
-//	}
-//	return data;
-//}
-//
 float tempRead(){
-//	if(!sensorInit())
-//		return 0;
-//	sensorWrite(0xCC);
-//	sensorWrite(0x44);
-//	if(!sensorInit())
-//		return 0;
-//	sensorWrite(0xCC);
-//	sensorWrite(0xBE);
-//	uint8_t temp = sensorRead();
-//	temp |= sensorRead() << 8;
-//	return temp;
-
 	DS18B20_ReadAll();
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, 1);
 	DS18B20_StartAll();
@@ -304,8 +154,10 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM1_Init();
   MX_I2C1_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim3);
   HAL_UART_Receive_IT(&huart1, receivedData, 1);
 
   DS18B20_Init(DS18B20_Resolution_12bits);
@@ -316,10 +168,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   ssd1306_init();
-
-//  ssd1306_write_string(font6x8, "ABC");
-//  ssd1306_write_string(font7x10, "ABC");
-//  ssd1306_write_string(font16x26, "ABC");
 
   ssd1306_write_string(font11x18, "");
   ssd1306_enter();
@@ -336,12 +184,13 @@ int main(void)
   HAL_UART_Transmit(&huart2, "Initialize successful\n\r", 23, HAL_MAX_DELAY);
   while (1)
   {
-	 int pressedButton = !HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
+//	 int pressedButton = !HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
 	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, !workingInProgress);
 	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, workingInProgress);
 	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, workingInProgress);
 
 	 if(pressedButton && !pressing && !workingInProgress){
+		 pressedButton = 0;
 		 pressing = 1;
 		 workingInProgress = 1;
 		 dataPrepared = 0;
@@ -357,18 +206,6 @@ int main(void)
 		 ssd1306_update_screen();
 
 		 // get Value from thermo Sensor
-//		 int thermoAv = 0;
-//		 sConfig.Channel = ADC_CHANNEL_1;
-//		 for(int i=1;i<=100;i++){
-//			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-//			 HAL_ADC_Start(&hadc1);
-//			 int adcValue;
-//			 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-//				adcValue = HAL_ADC_GetValue(&hadc1);
-//				thermoAv+=adcValue;
-//			 }
-//		 }
-//		 thermoAv/=100;
 		 int thermoAv = 0;
 		 float thermoSum = 0;
 		 for(int i=1;i<=100;i++){
@@ -396,20 +233,8 @@ int main(void)
 		 int tdsValue = (133.42*compensationVolatge*compensationVolatge*compensationVolatge - 255.86*compensationVolatge*compensationVolatge + 857.39*compensationVolatge)*0.5; //convert voltage value to tds value
 
 
-		 // get Value from O2 Sensor
-//		 int O2av = 0;
-//		 sConfig.Channel = ADC_CHANNEL_2;
-//		 for(int i=1;i<=100;i++){
-//			 HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-//			 HAL_ADC_Start(&hadc1);
-//			 int adcValue;
-//			 if(HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK){
-//				adcValue = HAL_ADC_GetValue(&hadc1);
-//				O2av+=adcValue;
-//			 }
-//		 }
-//		 O2av/=100;
-		 int O2av = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10);
+		 // get Value from Water Sensor
+		 int O2av = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) | 1;
 
 		 // Convert Int to String
 		 sprintf(buffer, "%04d", tdsValue);
@@ -664,7 +489,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 100;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 100000;
+  htim2.Init.Period = 10000000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -685,6 +510,51 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 1000;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 10000;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
 
 }
 
