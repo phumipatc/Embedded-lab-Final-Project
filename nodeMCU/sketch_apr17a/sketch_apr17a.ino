@@ -5,14 +5,14 @@
 EspSoftwareSerial::UART testSerial;
 
 // WiFi credentials
-const char* ssid = "rayongcom_2.4";
-const char* password = "rycsupply";
+const char* ssid = "no internet";
+const char* password = "nointernet";
 
 // Set your Firebase project's unique identifier
-const char* firebaseHost = "embbeded-final-project-water-default-rtdb.asia-southeast1.firebasedatabase.app";
+const char* firebaseHost = "embbeded-final-project-w-ecb5a-default-rtdb.asia-southeast1.firebasedatabase.app";
 
 // Set your Firebase project's authentication credentials
-const char* firebaseAuth = "WtZpws8GzsHQx41SxqoM3wqTODSeMAiDHoGbCzDa";
+const char* firebaseAuth = "jxLZrZjcQk7PCl4d1haju3DTsFcvi0iGaps1ZfnK";
 
 // Create an instance of the Firebase Data object
 FirebaseData firebaseData;

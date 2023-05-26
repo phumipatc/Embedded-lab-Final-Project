@@ -231,7 +231,8 @@ int main(void)
 		 float compensationCoefficient=1.0+0.02*(thermoAv-25.0);    //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
 		 float compensationVolatge=averageVoltage/compensationCoefficient;  //temperature compensation
 		 int tdsValue = (133.42*compensationVolatge*compensationVolatge*compensationVolatge - 255.86*compensationVolatge*compensationVolatge + 857.39*compensationVolatge)*0.5; //convert voltage value to tds value
-
+		 if(tdsValue > 999)
+			 tdsValue = 999;
 
 		 // get Value from Water Sensor
 		 int O2av = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) | 1;
@@ -256,12 +257,12 @@ int main(void)
 		 ssd1306_enter();
 		 sprintf(scrBuffer, "Temp: %d C",thermoAv/10);
 		 ssd1306_write_string(font11x18, scrBuffer);
-		 ssd1306_enter();
-		 if(O2av)
-			 sprintf(scrBuffer, "Water: YES");
-		 else
-			 sprintf(scrBuffer, "Water: NO");
-		 ssd1306_write_string(font11x18, scrBuffer);
+//		 ssd1306_enter();
+//		 if(O2av)
+//			 sprintf(scrBuffer, "Water: YES");
+//		 else
+//			 sprintf(scrBuffer, "Water: NO");
+//		 ssd1306_write_string(font11x18, scrBuffer);
 		 ssd1306_enter();
 		 ssd1306_update_screen();
 	 }else if(!pressedButton && pressing){
